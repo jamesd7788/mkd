@@ -6,18 +6,20 @@ Built for terminal workflows where you want to preview `.md` files without leavi
 
 ## Install
 
+### Homebrew
+
+```bash
+brew tap jamesd7788/tap
+brew install mkd
+```
+
+### From source
+
 Requires macOS 13+ and Swift 5.9+.
 
 ```bash
-# build
 swift build -c release
-
-# symlink to PATH
-ln -sf $(swift build -c release --show-bin-path)/mkd /usr/local/bin/mkd
-
-# or bundle as .app
-./scripts/bundle-app.sh
-cp -R .build/arm64-apple-macosx/release/mkd.app /Applications/
+ln -sf $(swift build -c release --show-bin-path)/mkd ~/.local/bin/mkd
 ```
 
 ## Usage
