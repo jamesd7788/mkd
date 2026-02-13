@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+/* {{DEFAULT_CSS}} */
+</style>
+<style media="(prefers-color-scheme: dark)">
+/* {{HLJS_DARK_CSS}} */
+</style>
+<style media="(prefers-color-scheme: light)">
+/* {{HLJS_LIGHT_CSS}} */
+</style>
+<style>
+/* {{USER_CSS}} */
+</style>
+<script>
+/* {{MARKED_JS}} */
+</script>
+<script>
+/* {{HIGHLIGHT_JS}} */
+</script>
+</head>
+<body>
+<div id="content"></div>
+<script>
+marked.setOptions({ gfm: true, breaks: false });
+
+function renderMarkdown(md, fontSize) {
+    var scrollRatio = 0;
+    var docEl = document.documentElement;
+    var maxScroll = docEl.scrollHeight - docEl.clientHeight;
+    if (maxScroll > 0) {
+        scrollRatio = docEl.scrollTop / maxScroll;
+    }
+
+    document.getElementById('content').innerHTML = marked.parse(md);
+    document.body.style.fontSize = fontSize + 'px';
+
+    // highlight all code blocks after render
+    document.querySelectorAll('pre code').forEach(function(block) {
+        hljs.highlightElement(block);
+    });
+
+    // restore scroll position proportionally
+    requestAnimationFrame(function() {
+        var newMax = docEl.scrollHeight - docEl.clientHeight;
+        if (newMax > 0) {
+            docEl.scrollTop = scrollRatio * newMax;
+        }
+    });
+}
+
+function setFontSize(size) {
+    document.body.style.fontSize = size + 'px';
+}
+</script>
+</body>
+</html>
