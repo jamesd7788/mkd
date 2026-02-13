@@ -1,0 +1,33 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build
+        run: swift build -c release
+
+      - name: Package
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/}
+          mkdir mkd-${VERSION}-arm64
+          cp .build/release/mkd mkd-${VERSION}-arm64/
+          cp -R .build/release/mkd_mkd.bundle mkd-${VERSION}-arm64/
+          tar czf mkd-${VERSION}-arm64.tar.gz mkd-${VERSION}-arm64
+
+      - name: Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/}
+          gh release create ${VERSION} \
+            --title "${VERSION}" \
+            --generate-notes \
+            mkd-${VERSION}-arm64.tar.gz
