@@ -1,10 +1,15 @@
 import Foundation
 
-class FileWatcher: ObservableObject {
+class LocalFileSource: ObservableObject, FileSource {
     let url: URL
     var onChange: (() -> Void)?
+    var onConnectionStatus: ((ConnectionStatus) -> Void)?
 
-    private var fileSource: DispatchSourceFileSystemObject?
+    var displayName: String { url.lastPathComponent }
+    var displayPath: String { url.path }
+    var isRemote: Bool { false }
+
+    private var fileSource_: DispatchSourceFileSystemObject?
     private var dirSource: DispatchSourceFileSystemObject?
     private let queue = DispatchQueue(label: "mkd.filewatcher", qos: .utility)
     private var lastModified: Date?
@@ -14,20 +19,24 @@ class FileWatcher: ObservableObject {
         self.lastModified = Self.modDate(url)
     }
 
+    func fetchContent() throws -> String {
+        try String(contentsOf: url, encoding: .utf8)
+    }
+
     func start() {
         watchFile()
         watchDirectory()
     }
 
     func stop() {
-        fileSource?.cancel()
+        fileSource_?.cancel()
         dirSource?.cancel()
-        fileSource = nil
+        fileSource_ = nil
         dirSource = nil
     }
 
     private func watchFile() {
-        fileSource?.cancel()
+        fileSource_?.cancel()
 
         let fd = open(url.path, O_EVTONLY)
         guard fd >= 0 else { return }
@@ -46,7 +55,7 @@ class FileWatcher: ObservableObject {
             close(fd)
         }
 
-        fileSource = source
+        fileSource_ = source
         source.resume()
     }
 

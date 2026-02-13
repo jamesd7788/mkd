@@ -2,12 +2,12 @@ import AppKit
 import SwiftUI
 
 class AppDelegate: NSObject, NSApplicationDelegate {
-    let fileURL: URL
+    let source: any FileSource
     var window: MarkdownWindow?
     let viewModel = WebViewModel()
 
-    init(fileURL: URL) {
-        self.fileURL = fileURL
+    init(source: any FileSource) {
+        self.source = source
         super.init()
     }
 
@@ -15,14 +15,37 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.setActivationPolicy(.regular)
         setupMenuBar()
 
-        let contentView = ContentView(fileURL: fileURL, viewModel: viewModel)
-        window = MarkdownWindow(fileURL: fileURL, content: contentView)
+        let src = source
+        let contentView = ContentView(
+            viewModel: viewModel,
+            fetchContent: { try src.fetchContent() },
+            startWatching: { callback in
+                src.onChange = callback
+                src.start()
+            },
+            stopWatching: { src.stop() },
+            onStatusChange: src.isRemote ? { callback in
+                src.onConnectionStatus = callback
+            } : nil
+        )
+        window = MarkdownWindow(
+            title: source.displayName,
+            frameKey: source.displayPath,
+            content: contentView
+        )
         window?.makeKeyAndOrderFront(nil)
-        NSApp.activate(ignoringOtherApps: true)
+        DispatchQueue.main.async {
+            NSApp.activate(ignoringOtherApps: true)
+            self.window?.orderFrontRegardless()
+        }
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         true
+    }
+
+    func applicationWillTerminate(_ notification: Notification) {
+        source.stop()
     }
 
     private func setupMenuBar() {

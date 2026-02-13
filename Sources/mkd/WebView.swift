@@ -43,6 +43,10 @@ class WebViewModel: ObservableObject {
         }
     }
 
+    func setConnectionStatus(_ status: ConnectionStatus) {
+        webView?.evaluateJavaScript("setConnectionStatus('\(status.rawValue)')") { _, _ in }
+    }
+
     func changeFontSize(delta: Int) {
         fontSize = max(8, min(32, fontSize + delta))
         webView?.evaluateJavaScript("setFontSize(\(fontSize))") { _, _ in }

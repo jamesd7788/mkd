@@ -23,9 +23,20 @@
 </script>
 </head>
 <body>
+<div id="search-bar">
+    <span id="search-prompt">/</span>
+    <input id="search-input" type="text" spellcheck="false" autocomplete="off">
+    <span id="search-count"></span>
+</div>
+<div id="status-dot" class="hidden"></div>
 <div id="content"></div>
 <script>
 marked.setOptions({ gfm: true, breaks: false });
+
+// --- search state ---
+var searchMatches = [];
+var searchIndex = -1;
+var searchActive = false;
 
 function renderMarkdown(md, fontSize) {
     var scrollRatio = 0;
@@ -50,11 +61,209 @@ function renderMarkdown(md, fontSize) {
             docEl.scrollTop = scrollRatio * newMax;
         }
     });
+
+    // re-run search if active
+    if (searchActive) {
+        performSearch(document.getElementById('search-input').value);
+    }
 }
 
 function setFontSize(size) {
     document.body.style.fontSize = size + 'px';
 }
+
+// --- connection status ---
+function setConnectionStatus(status) {
+    var dot = document.getElementById('status-dot');
+    dot.className = status; // 'connected', 'reconnecting', 'disconnected', or 'hidden'
+}
+
+// --- search ---
+function openSearch() {
+    searchActive = true;
+    var bar = document.getElementById('search-bar');
+    var input = document.getElementById('search-input');
+    bar.classList.add('visible');
+    input.value = '';
+    input.focus();
+    document.getElementById('search-count').textContent = '';
+    clearHighlights();
+}
+
+function closeSearch() {
+    searchActive = false;
+    var bar = document.getElementById('search-bar');
+    bar.classList.remove('visible');
+    document.getElementById('search-input').blur();
+    clearHighlights();
+    searchMatches = [];
+    searchIndex = -1;
+    document.getElementById('search-count').textContent = '';
+}
+
+function clearHighlights() {
+    document.querySelectorAll('mark.mkd-match').forEach(function(el) {
+        var parent = el.parentNode;
+        parent.replaceChild(document.createTextNode(el.textContent), el);
+        parent.normalize();
+    });
+}
+
+function performSearch(query) {
+    clearHighlights();
+    searchMatches = [];
+    searchIndex = -1;
+
+    if (!query) {
+        document.getElementById('search-count').textContent = '';
+        return;
+    }
+
+    var content = document.getElementById('content');
+    var walker = document.createTreeWalker(content, NodeFilter.SHOW_TEXT, null, false);
+    var textNodes = [];
+    while (walker.nextNode()) textNodes.push(walker.currentNode);
+
+    var lowerQuery = query.toLowerCase();
+
+    for (var i = 0; i < textNodes.length; i++) {
+        var node = textNodes[i];
+        var text = node.textContent;
+        var lowerText = text.toLowerCase();
+        var idx = lowerText.indexOf(lowerQuery);
+        if (idx === -1) continue;
+
+        var parts = [];
+        var lastIdx = 0;
+        while (idx !== -1) {
+            if (idx > lastIdx) parts.push(document.createTextNode(text.substring(lastIdx, idx)));
+            var mark = document.createElement('mark');
+            mark.className = 'mkd-match';
+            mark.textContent = text.substring(idx, idx + query.length);
+            parts.push(mark);
+            searchMatches.push(mark);
+            lastIdx = idx + query.length;
+            idx = lowerText.indexOf(lowerQuery, lastIdx);
+        }
+        if (lastIdx < text.length) parts.push(document.createTextNode(text.substring(lastIdx)));
+
+        var parent = node.parentNode;
+        for (var j = 0; j < parts.length; j++) {
+            parent.insertBefore(parts[j], node);
+        }
+        parent.removeChild(node);
+    }
+
+    var countEl = document.getElementById('search-count');
+    if (searchMatches.length > 0) {
+        searchIndex = 0;
+        highlightCurrent();
+        countEl.textContent = '1/' + searchMatches.length;
+    } else {
+        countEl.textContent = 'no matches';
+    }
+}
+
+function highlightCurrent() {
+    searchMatches.forEach(function(m) { m.classList.remove('mkd-current'); });
+    if (searchIndex >= 0 && searchIndex < searchMatches.length) {
+        var cur = searchMatches[searchIndex];
+        cur.classList.add('mkd-current');
+        cur.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    }
+}
+
+function searchNext() {
+    if (searchMatches.length === 0) return;
+    searchIndex = (searchIndex + 1) % searchMatches.length;
+    highlightCurrent();
+    document.getElementById('search-count').textContent = (searchIndex + 1) + '/' + searchMatches.length;
+}
+
+function searchPrev() {
+    if (searchMatches.length === 0) return;
+    searchIndex = (searchIndex - 1 + searchMatches.length) % searchMatches.length;
+    highlightCurrent();
+    document.getElementById('search-count').textContent = (searchIndex + 1) + '/' + searchMatches.length;
+}
+
+// --- search input handlers ---
+var searchInput = document.getElementById('search-input');
+
+searchInput.addEventListener('input', function() {
+    performSearch(this.value);
+});
+
+searchInput.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        e.preventDefault();
+        closeSearch();
+    } else if (e.key === 'Enter') {
+        e.preventDefault();
+        searchInput.blur();
+    }
+});
+
+// --- vim keybindings ---
+document.addEventListener('keydown', function(e) {
+    // don't intercept when search input is focused (except Esc handled above)
+    if (document.activeElement === searchInput) return;
+    // don't intercept modified keys (cmd, ctrl, alt) except shift
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+
+    var docEl = document.documentElement;
+    var step = 60;
+    var pageStep = window.innerHeight * 0.5;
+
+    switch (e.key) {
+        case '/':
+            e.preventDefault();
+            openSearch();
+            break;
+        case 'j':
+            e.preventDefault();
+            window.scrollBy(0, step);
+            break;
+        case 'k':
+            e.preventDefault();
+            window.scrollBy(0, -step);
+            break;
+        case 'd':
+            e.preventDefault();
+            window.scrollBy(0, pageStep);
+            break;
+        case 'u':
+            e.preventDefault();
+            window.scrollBy(0, -pageStep);
+            break;
+        case 'g':
+            e.preventDefault();
+            window.scrollTo(0, 0);
+            break;
+        case 'G':
+            e.preventDefault();
+            window.scrollTo(0, docEl.scrollHeight);
+            break;
+        case 'n':
+            if (searchMatches.length > 0) {
+                e.preventDefault();
+                searchNext();
+            }
+            break;
+        case 'N':
+            if (searchMatches.length > 0) {
+                e.preventDefault();
+                searchPrev();
+            }
+            break;
+        case 'Escape':
+            if (searchActive) {
+                e.preventDefault();
+                closeSearch();
+            }
+            break;
+    }
+});
 </script>
 </body>
 </html>

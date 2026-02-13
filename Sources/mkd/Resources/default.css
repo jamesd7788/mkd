@@ -138,3 +138,95 @@ ul.contains-task-list {
 input[type="checkbox"] {
     margin-right: 0.5em;
 }
+
+/* search bar */
+#search-bar {
+    position: fixed;
+    bottom: -3em;
+    left: 0;
+    right: 0;
+    height: 2.5em;
+    display: flex;
+    align-items: center;
+    padding: 0 1em;
+    background: var(--code-bg);
+    border-top: 1px solid var(--border);
+    font-family: "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.875em;
+    transition: bottom 0.15s ease;
+    z-index: 100;
+}
+
+#search-bar.visible {
+    bottom: 0;
+}
+
+#search-prompt {
+    color: var(--blockquote-fg);
+    margin-right: 0.25em;
+    user-select: none;
+}
+
+#search-input {
+    flex: 1;
+    background: none;
+    border: none;
+    outline: none;
+    color: var(--fg);
+    font: inherit;
+    padding: 0;
+}
+
+#search-count {
+    color: var(--blockquote-fg);
+    margin-left: 1em;
+    white-space: nowrap;
+}
+
+mark.mkd-match {
+    background: rgba(255, 200, 0, 0.3);
+    color: inherit;
+    border-radius: 2px;
+    padding: 0 1px;
+}
+
+mark.mkd-match.mkd-current {
+    background: rgba(255, 160, 0, 0.6);
+}
+
+/* connection status dot */
+#status-dot {
+    position: fixed;
+    top: 8px;
+    right: 8px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    z-index: 100;
+    transition: opacity 0.3s ease;
+}
+
+#status-dot.hidden {
+    display: none;
+}
+
+#status-dot.connected {
+    background: #3fb950;
+    opacity: 0.6;
+}
+
+#status-dot.reconnecting {
+    background: #d29922;
+    opacity: 0.8;
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+#status-dot.disconnected {
+    background: #f85149;
+    opacity: 0.9;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 1; }
+}

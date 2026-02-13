@@ -1,29 +1,30 @@
 import SwiftUI
 
 struct ContentView: View {
-    let fileURL: URL
     let viewModel: WebViewModel
-    @StateObject private var watcher: FileWatcher
-
-    init(fileURL: URL, viewModel: WebViewModel) {
-        self.fileURL = fileURL
-        self.viewModel = viewModel
-        _watcher = StateObject(wrappedValue: FileWatcher(url: fileURL))
-    }
+    let fetchContent: () throws -> String
+    let startWatching: (@escaping () -> Void) -> Void
+    let stopWatching: () -> Void
+    let onStatusChange: ((@escaping (ConnectionStatus) -> Void) -> Void)?
 
     var body: some View {
         WebView(viewModel: viewModel)
             .onAppear {
                 loadMarkdown()
-                watcher.onChange = { [self] in
+                startWatching { [self] in
                     loadMarkdown()
                 }
-                watcher.start()
+                onStatusChange? { [self] status in
+                    viewModel.setConnectionStatus(status)
+                }
+            }
+            .onDisappear {
+                stopWatching()
             }
     }
 
     private func loadMarkdown() {
-        guard let content = try? String(contentsOf: fileURL, encoding: .utf8) else { return }
+        guard let content = try? fetchContent() else { return }
         viewModel.loadMarkdown(content)
     }
 }
