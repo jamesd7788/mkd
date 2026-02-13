@@ -49,7 +49,7 @@ class WebViewModel: ObservableObject {
     }
 
     private static func buildHTML() -> String {
-        let bundle = Bundle.module
+        let bundle = Bundle.resolved
         let templateURL = bundle.url(forResource: "template", withExtension: "html", subdirectory: "Resources")!
         var html = try! String(contentsOf: templateURL, encoding: .utf8)
 
