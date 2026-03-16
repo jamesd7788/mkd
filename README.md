@@ -25,7 +25,12 @@ ln -sf $(swift build -c release --show-bin-path)/mkd ~/.local/bin/mkd
 ## Usage
 
 ```bash
-mkd /path/to/file.md
+mkd /path/to/file.md                          # local file
+mkd host:path/to/file.md                       # remote file via SSH
+cat notes.md | mkd                             # pipe from stdin
+gh pr view 42 --json body -q .body | mkd       # pipe anything
+mkd --watch-cmd "some-command" --interval 3    # re-run command every 3s
+mkd --progress tasks.md                        # task/progress viewer
 ```
 
 Edit the file in any editor and the viewer updates automatically.
@@ -40,12 +45,24 @@ Edit the file in any editor and the viewer updates automatically.
 | `Cmd Q` | Quit |
 | `Cmd C` | Copy |
 | `Cmd A` | Select all |
+| `j / k` | Scroll down / up |
+| `d / u` | Page down / up |
+| `g / G` | Jump to top / bottom |
+| `/` | Open search |
+| `n / N` | Next / previous match |
+| `Esc` | Close search |
 
-Font size is persisted across sessions. Window position and size are restored on next open.
+Font size, theme, window position and size are persisted across sessions.
 
 ## Features
 
 - **Live reload** — watches file and parent directory (handles atomic saves from vim, etc.)
+- **Stdin support** — pipe markdown from any command
+- **Watch mode** — `--watch-cmd` re-runs a command on interval, renders output as markdown
+- **Progress mode** — `--progress` renders task lists as a navigable slide deck with progress bar
+- **Remote viewing** — view files on remote hosts via SSH with auto-reconnect
+- **6 themes** — github, dracula, nord, gruvbox, solarized, rose (persisted, follows system dark/light)
+- **Vim keybindings** — `j/k` scroll, `/` search, `g/G` top/bottom, `d/u` page down/up, `n/N` next/prev
 - **Syntax highlighting** — [highlight.js](https://highlightjs.org/) with GitHub themes
 - **Dark/light mode** — follows system appearance
 - **Fully offline** — all JS/CSS bundled, network requests blocked. Links open in default browser.
@@ -60,19 +77,25 @@ Create `~/.config/mkd/style.css` to override default styles. It's injected after
 
 ```
 Sources/mkd/
-├── main.swift           # CLI entry, NSApplication bootstrap
-├── AppDelegate.swift    # Window creation, menu bar
-├── MarkdownWindow.swift # NSWindow config, frame persistence
-├── ContentView.swift    # SwiftUI view, file watcher lifecycle
-├── WebView.swift        # WKWebView wrapper, markdown rendering
-├── FileWatcher.swift    # DispatchSource file/directory watcher
+├── main.swift             # CLI entry, arg parsing, NSApplication bootstrap
+├── AppDelegate.swift      # Window creation, menu bar, theme menu
+├── AppIcon.swift          # SVG-based app icon generated at runtime
+├── MarkdownWindow.swift   # NSWindow config, frame persistence
+├── ContentView.swift      # SwiftUI view, file watcher lifecycle
+├── WebView.swift          # WKWebView wrapper, rendering, themes
+├── FileSource.swift       # FileSource protocol
+├── FileWatcher.swift      # Local file/directory watcher
+├── RemoteFileSource.swift # SSH remote file watcher
+├── StdinSource.swift      # Stdin pipe source
+├── CommandSource.swift    # --watch-cmd polling source
+├── BundleFix.swift        # Bundle resolution for symlinks
 └── Resources/
-    ├── template.html    # HTML shell
-    ├── marked.min.js    # Markdown parser (v15)
-    ├── highlight.min.js # Syntax highlighter (v11)
-    ├── default.css      # Base styles (dark/light)
-    ├── hljs-dark.css    # GitHub Dark code theme
-    └── hljs-light.css   # GitHub Light code theme
+    ├── template.html      # HTML shell + themes + progress mode
+    ├── marked.min.js      # Markdown parser (v15)
+    ├── highlight.min.js   # Syntax highlighter (v11)
+    ├── default.css        # Base styles + progress mode
+    ├── hljs-dark.css      # GitHub Dark code theme
+    └── hljs-light.css     # GitHub Light code theme
 ```
 
 ## How It Works
