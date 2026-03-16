@@ -1,19 +1,25 @@
 import AppKit
 import SwiftUI
 
-class AppDelegate: NSObject, NSApplicationDelegate {
+class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     let source: any FileSource
+    let progressMode: Bool
     var window: MarkdownWindow?
     let viewModel = WebViewModel()
 
-    init(source: any FileSource) {
+    init(source: any FileSource, progressMode: Bool = false) {
         self.source = source
+        self.progressMode = progressMode
         super.init()
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.regular)
         setupMenuBar()
+
+        if progressMode {
+            viewModel.renderMode = .progress
+        }
 
         let src = source
         let contentView = ContentView(
@@ -28,8 +34,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 src.onConnectionStatus = callback
             } : nil
         )
+        let title = progressMode ? "\(source.displayName) — progress" : source.displayName
         window = MarkdownWindow(
-            title: source.displayName,
+            title: title,
             frameKey: source.displayPath,
             content: contentView
         )
@@ -71,6 +78,18 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         stayOnTopItem.keyEquivalentModifierMask = [.command, .shift]
         viewMenu.addItem(stayOnTopItem)
 
+        viewMenu.addItem(.separator())
+
+        let themeMenu = NSMenu(title: "Theme")
+        for name in WebViewModel.availableThemes {
+            let item = NSMenuItem(title: name.capitalized, action: #selector(selectTheme(_:)), keyEquivalent: "")
+            item.representedObject = name
+            themeMenu.addItem(item)
+        }
+        let themeItem = NSMenuItem(title: "Theme", action: nil, keyEquivalent: "")
+        themeItem.submenu = themeMenu
+        viewMenu.addItem(themeItem)
+
         viewMenuItem.submenu = viewMenu
         mainMenu.addItem(viewMenuItem)
 
@@ -95,5 +114,21 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func toggleStayOnTop() {
         window?.toggleStayOnTop()
+    }
+
+    @objc private func selectTheme(_ sender: NSMenuItem) {
+        guard let name = sender.representedObject as? String else { return }
+        viewModel.setTheme(name)
+        // update checkmarks
+        sender.menu?.items.forEach { $0.state = .off }
+        sender.state = .on
+    }
+
+    func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
+        if menuItem.action == #selector(selectTheme(_:)),
+           let name = menuItem.representedObject as? String {
+            menuItem.state = name == viewModel.currentTheme ? .on : .off
+        }
+        return true
     }
 }

@@ -25,6 +25,6 @@ struct ContentView: View {
 
     private func loadMarkdown() {
         guard let content = try? fetchContent() else { return }
-        viewModel.loadMarkdown(content)
+        viewModel.loadContent(content)
     }
 }

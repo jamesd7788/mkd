@@ -30,15 +30,83 @@
 </div>
 <div id="status-dot" class="hidden"></div>
 <div id="content"></div>
+<div id="progress-container">
+    <div id="progress-header">
+        <div id="progress-bar-track"><div id="progress-bar-fill"></div></div>
+        <div id="progress-stats"></div>
+    </div>
+    <div id="task-display">
+        <div id="task-phase"></div>
+        <div id="task-content"></div>
+        <div id="task-status"></div>
+    </div>
+    <div id="task-nav"></div>
+</div>
 <script>
 marked.setOptions({ gfm: true, breaks: false });
+
+// --- themes ---
+var themes = {
+    github: {
+        light: { fg:'#24292e', bg:'#ffffff', link:'#0366d6', border:'#e1e4e8', codeBg:'#f6f8fa', blockquoteFg:'#6a737d', tableBorder:'#dfe2e5', tableStripe:'#f6f8fa' },
+        dark:  { fg:'#c9d1d9', bg:'#0d1117', link:'#58a6ff', border:'#30363d', codeBg:'#161b22', blockquoteFg:'#8b949e', tableBorder:'#30363d', tableStripe:'#161b22' }
+    },
+    dracula: {
+        light: { fg:'#282a36', bg:'#f8f8f2', link:'#6272a4', border:'#d6d6d6', codeBg:'#e8e8e4', blockquoteFg:'#6272a4', tableBorder:'#d6d6d6', tableStripe:'#ededeb' },
+        dark:  { fg:'#f8f8f2', bg:'#282a36', link:'#8be9fd', border:'#44475a', codeBg:'#44475a', blockquoteFg:'#6272a4', tableBorder:'#44475a', tableStripe:'#343746' }
+    },
+    nord: {
+        light: { fg:'#2e3440', bg:'#eceff4', link:'#5e81ac', border:'#d8dee9', codeBg:'#e5e9f0', blockquoteFg:'#4c566a', tableBorder:'#d8dee9', tableStripe:'#e5e9f0' },
+        dark:  { fg:'#d8dee9', bg:'#2e3440', link:'#88c0d0', border:'#3b4252', codeBg:'#3b4252', blockquoteFg:'#616e88', tableBorder:'#3b4252', tableStripe:'#353c4a' }
+    },
+    gruvbox: {
+        light: { fg:'#3c3836', bg:'#fbf1c7', link:'#076678', border:'#d5c4a1', codeBg:'#ebdbb2', blockquoteFg:'#665c54', tableBorder:'#d5c4a1', tableStripe:'#f2e5bc' },
+        dark:  { fg:'#ebdbb2', bg:'#282828', link:'#83a598', border:'#504945', codeBg:'#3c3836', blockquoteFg:'#a89984', tableBorder:'#504945', tableStripe:'#32302f' }
+    },
+    solarized: {
+        light: { fg:'#657b83', bg:'#fdf6e3', link:'#268bd2', border:'#eee8d5', codeBg:'#eee8d5', blockquoteFg:'#93a1a1', tableBorder:'#eee8d5', tableStripe:'#f5efdc' },
+        dark:  { fg:'#839496', bg:'#002b36', link:'#268bd2', border:'#073642', codeBg:'#073642', blockquoteFg:'#586e75', tableBorder:'#073642', tableStripe:'#06313c' }
+    },
+    rose: {
+        light: { fg:'#403b3b', bg:'#fff5f5', link:'#be185d', border:'#e8d5d5', codeBg:'#f5e6e6', blockquoteFg:'#8c7575', tableBorder:'#e8d5d5', tableStripe:'#faf0f0' },
+        dark:  { fg:'#e8d5d5', bg:'#1c1517', link:'#f472b6', border:'#3d2832', codeBg:'#2a1c22', blockquoteFg:'#8c7575', tableBorder:'#3d2832', tableStripe:'#231a1e' }
+    }
+};
+
+function setTheme(name) {
+    var theme = themes[name];
+    if (!theme) return;
+    window._currentTheme = name;
+    var isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    var vars = isDark ? theme.dark : theme.light;
+    var root = document.documentElement;
+    root.style.setProperty('--fg', vars.fg);
+    root.style.setProperty('--bg', vars.bg);
+    root.style.setProperty('--link', vars.link);
+    root.style.setProperty('--border', vars.border);
+    root.style.setProperty('--code-bg', vars.codeBg);
+    root.style.setProperty('--blockquote-fg', vars.blockquoteFg);
+    root.style.setProperty('--table-border', vars.tableBorder);
+    root.style.setProperty('--table-stripe', vars.tableStripe);
+}
+
+// respond to system dark/light changes
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function() {
+    if (window._currentTheme) setTheme(window._currentTheme);
+});
 
 // --- search state ---
 var searchMatches = [];
 var searchIndex = -1;
 var searchActive = false;
 
+var progressMode = false;
+
 function renderMarkdown(md, fontSize) {
+    progressMode = false;
+    document.getElementById('content').style.display = '';
+    document.getElementById('progress-container').classList.remove('active');
+
     var scrollRatio = 0;
     var docEl = document.documentElement;
     var maxScroll = docEl.scrollHeight - docEl.clientHeight;
@@ -66,6 +134,172 @@ function renderMarkdown(md, fontSize) {
     if (searchActive) {
         performSearch(document.getElementById('search-input').value);
     }
+}
+
+// --- progress mode ---
+var progressTasks = [];
+var progressIndex = 0;
+var progressCurrentRawLine = null;
+
+function parseTasks(md) {
+    var lines = md.split('\n');
+    var tasks = [];
+    var currentPhase = '';
+    var i = 0;
+    while (i < lines.length) {
+        var line = lines[i];
+        // track headings as phase context
+        var headingMatch = line.match(/^#{1,3}\s+(.+)/);
+        if (headingMatch) {
+            currentPhase = headingMatch[1].trim();
+            i++;
+            continue;
+        }
+        // match task items
+        var taskMatch = line.match(/^(\s*)- \[([ xX])\]\s+(.+)/);
+        if (taskMatch) {
+            var checked = taskMatch[2] !== ' ';
+            var text = taskMatch[3].trim();
+            var rawLine = line.trim();
+            // collect indented body lines
+            var body = [];
+            var baseIndent = taskMatch[1].length;
+            var j = i + 1;
+            while (j < lines.length) {
+                var nextLine = lines[j];
+                if (nextLine.trim() === '') {
+                    body.push('');
+                    j++;
+                    continue;
+                }
+                var nextIndent = nextLine.match(/^(\s*)/)[1].length;
+                // sub-items or continuation lines
+                if (nextIndent > baseIndent) {
+                    body.push(nextLine);
+                    j++;
+                } else {
+                    break;
+                }
+            }
+            tasks.push({
+                index: tasks.length,
+                checked: checked,
+                text: text,
+                body: body.join('\n'),
+                phase: currentPhase,
+                rawLine: rawLine
+            });
+            i = j;
+            continue;
+        }
+        i++;
+    }
+    return tasks;
+}
+
+function normalizeRawLine(raw) {
+    return raw.replace(/- \[[ xX]\]/, '- [ ]').trim();
+}
+
+function renderProgress(md, fontSize) {
+    progressMode = true;
+    document.getElementById('content').style.display = 'none';
+    document.getElementById('progress-container').classList.add('active');
+    document.body.style.fontSize = fontSize + 'px';
+
+    var oldTasks = progressTasks;
+    progressTasks = parseTasks(md);
+
+    if (progressTasks.length === 0) {
+        document.getElementById('task-content').innerHTML = '<p style="color:var(--blockquote-fg)">no tasks found</p>';
+        document.getElementById('progress-stats').textContent = '';
+        document.getElementById('progress-bar-fill').style.width = '0%';
+        document.getElementById('task-phase').textContent = '';
+        document.getElementById('task-status').textContent = '';
+        document.getElementById('task-status').className = '';
+        document.getElementById('task-nav').textContent = '';
+        return;
+    }
+
+    if (oldTasks.length === 0) {
+        // first load — focus first unchecked
+        var firstUnchecked = progressTasks.findIndex(function(t) { return !t.checked; });
+        progressIndex = firstUnchecked >= 0 ? firstUnchecked : 0;
+        progressCurrentRawLine = progressTasks[progressIndex].rawLine;
+    } else {
+        // reload — try to stay on same task by normalized rawLine
+        if (progressCurrentRawLine) {
+            var norm = normalizeRawLine(progressCurrentRawLine);
+            var found = progressTasks.findIndex(function(t) {
+                return normalizeRawLine(t.rawLine) === norm;
+            });
+            if (found >= 0) {
+                progressIndex = found;
+            } else {
+                // task was deleted, clamp
+                progressIndex = Math.min(progressIndex, progressTasks.length - 1);
+            }
+        }
+        progressCurrentRawLine = progressTasks[progressIndex].rawLine;
+    }
+
+    updateProgressBar();
+    showTask(progressIndex, 0);
+}
+
+function updateProgressBar() {
+    var checked = progressTasks.filter(function(t) { return t.checked; }).length;
+    var total = progressTasks.length;
+    var pct = total > 0 ? (checked / total * 100) : 0;
+    document.getElementById('progress-bar-fill').style.width = pct.toFixed(1) + '%';
+    document.getElementById('progress-stats').textContent = checked + ' of ' + total + ' completed (' + Math.round(pct) + '%)';
+}
+
+function showTask(index, direction) {
+    if (index < 0 || index >= progressTasks.length) return;
+    progressIndex = index;
+    progressCurrentRawLine = progressTasks[index].rawLine;
+    var task = progressTasks[index];
+
+    var contentEl = document.getElementById('task-content');
+    var phaseEl = document.getElementById('task-phase');
+    var statusEl = document.getElementById('task-status');
+    var navEl = document.getElementById('task-nav');
+
+    // slide animation
+    if (direction !== 0) {
+        contentEl.classList.add(direction > 0 ? 'slide-up' : 'slide-down');
+        setTimeout(function() {
+            renderTaskContent(task, contentEl, phaseEl, statusEl, navEl);
+            contentEl.classList.remove('slide-up', 'slide-down');
+        }, 150);
+    } else {
+        renderTaskContent(task, contentEl, phaseEl, statusEl, navEl);
+    }
+}
+
+function renderTaskContent(task, contentEl, phaseEl, statusEl, navEl) {
+    phaseEl.textContent = task.phase;
+
+    // render task text + body as markdown
+    var taskMd = task.text;
+    if (task.body) {
+        taskMd += '\n\n' + task.body;
+    }
+    contentEl.innerHTML = marked.parse(taskMd);
+
+    // highlight code blocks
+    contentEl.querySelectorAll('pre code').forEach(function(block) {
+        hljs.highlightElement(block);
+    });
+
+    // scroll content back to top
+    contentEl.scrollTop = 0;
+
+    statusEl.textContent = task.checked ? 'completed' : 'pending';
+    statusEl.className = task.checked ? 'completed' : '';
+
+    navEl.textContent = (progressIndex + 1) + ' of ' + progressTasks.length;
 }
 
 function setFontSize(size) {
@@ -211,6 +445,64 @@ document.addEventListener('keydown', function(e) {
     // don't intercept modified keys (cmd, ctrl, alt) except shift
     if (e.metaKey || e.ctrlKey || e.altKey) return;
 
+    if (progressMode) {
+        // progress mode keybindings
+        var taskContent = document.getElementById('task-content');
+        var scrollStep = window.innerHeight * 0.4;
+        switch (e.key) {
+            case 'j':
+            case 'ArrowDown':
+                e.preventDefault();
+                if (progressIndex < progressTasks.length - 1) showTask(progressIndex + 1, 1);
+                break;
+            case 'k':
+            case 'ArrowUp':
+                e.preventDefault();
+                if (progressIndex > 0) showTask(progressIndex - 1, -1);
+                break;
+            case 'g':
+                e.preventDefault();
+                showTask(0, -1);
+                break;
+            case 'G':
+                e.preventDefault();
+                showTask(progressTasks.length - 1, 1);
+                break;
+            case 'n':
+                e.preventDefault();
+                // next unchecked
+                for (var i = progressIndex + 1; i < progressTasks.length; i++) {
+                    if (!progressTasks[i].checked) { showTask(i, 1); break; }
+                }
+                break;
+            case 'N':
+                e.preventDefault();
+                // prev unchecked
+                for (var i = progressIndex - 1; i >= 0; i--) {
+                    if (!progressTasks[i].checked) { showTask(i, -1); break; }
+                }
+                break;
+            case 'd':
+                e.preventDefault();
+                taskContent.scrollBy(0, scrollStep);
+                break;
+            case 'u':
+                e.preventDefault();
+                taskContent.scrollBy(0, -scrollStep);
+                break;
+            case 'ArrowRight':
+                e.preventDefault();
+                if (progressIndex < progressTasks.length - 1) showTask(progressIndex + 1, 1);
+                break;
+            case 'ArrowLeft':
+                e.preventDefault();
+                if (progressIndex > 0) showTask(progressIndex - 1, -1);
+                break;
+        }
+        return;
+    }
+
+    // normal mode keybindings
     var docEl = document.documentElement;
     var step = 60;
     var pageStep = window.innerHeight * 0.5;

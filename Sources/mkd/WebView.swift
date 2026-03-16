@@ -1,14 +1,19 @@
 import SwiftUI
 @preconcurrency import WebKit
 
+enum RenderMode {
+    case markdown, progress
+}
+
 class WebViewModel: ObservableObject {
     var webView: WKWebView?
+    var renderMode: RenderMode = .markdown
     private var fontSize: Int {
         get { UserDefaults.standard.object(forKey: "mkd-font-size") as? Int ?? 16 }
         set { UserDefaults.standard.set(newValue, forKey: "mkd-font-size") }
     }
     private var hasLoadedTemplate = false
-    private var pendingMarkdown: String?
+    private var pendingContent: String?
 
     func loadTemplate() {
         guard let webView = webView else { return }
@@ -17,18 +22,19 @@ class WebViewModel: ObservableObject {
         webView.loadHTMLString(html, baseURL: nil)
     }
 
-    func loadMarkdown(_ markdown: String) {
+    func loadContent(_ content: String) {
         guard let webView = webView, hasLoadedTemplate else {
-            pendingMarkdown = markdown
+            pendingContent = content
             return
         }
 
-        let escaped = markdown
+        let escaped = content
             .replacingOccurrences(of: "\\", with: "\\\\")
             .replacingOccurrences(of: "`", with: "\\`")
             .replacingOccurrences(of: "$", with: "\\$")
 
-        webView.evaluateJavaScript("renderMarkdown(`\(escaped)`, \(fontSize))") { _, error in
+        let fn = renderMode == .progress ? "renderProgress" : "renderMarkdown"
+        webView.evaluateJavaScript("\(fn)(`\(escaped)`, \(fontSize))") { _, error in
             if let error = error {
                 fputs("mkd: js error: \(error.localizedDescription)\n", stderr)
             }
@@ -37,10 +43,23 @@ class WebViewModel: ObservableObject {
 
     func templateDidLoad() {
         hasLoadedTemplate = true
-        if let md = pendingMarkdown {
-            pendingMarkdown = nil
-            loadMarkdown(md)
+        setTheme(currentTheme)
+        if let content = pendingContent {
+            pendingContent = nil
+            loadContent(content)
         }
+    }
+
+    var currentTheme: String {
+        get { UserDefaults.standard.string(forKey: "mkd-theme") ?? "github" }
+        set { UserDefaults.standard.set(newValue, forKey: "mkd-theme") }
+    }
+
+    static let availableThemes = ["github", "dracula", "nord", "gruvbox", "solarized", "rose"]
+
+    func setTheme(_ name: String) {
+        currentTheme = name
+        webView?.evaluateJavaScript("setTheme('\(name)')") { _, _ in }
     }
 
     func setConnectionStatus(_ status: ConnectionStatus) {

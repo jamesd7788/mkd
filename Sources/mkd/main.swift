@@ -1,16 +1,19 @@
 import AppKit
 
-guard CommandLine.arguments.count > 1 else {
-    fputs("usage: mkd <file.md>\n", stderr)
-    fputs("       mkd host:path/to/file.md\n", stderr)
+var args = Array(CommandLine.arguments.dropFirst())
+let progressMode = args.contains("--progress")
+args.removeAll { $0 == "--progress" }
+
+guard args.count >= 1 else {
+    fputs("usage: mkd [--progress] <file.md>\n", stderr)
+    fputs("       mkd [--progress] host:path/to/file.md\n", stderr)
     exit(1)
 }
 
-let arg = CommandLine.arguments[1]
+let arg = args[0]
 
 func isRemoteArg(_ s: String) -> Bool {
     guard s.contains(":") else { return false }
-    // local paths start with /, ~, or .
     let first = s.first!
     return first != "/" && first != "~" && first != "."
 }
@@ -27,7 +30,6 @@ if isRemoteArg(arg) {
     let host = String(parts[0])
     var remotePath = String(parts[1])
 
-    // prepend ~/ to relative remote paths
     if !remotePath.hasPrefix("/") && !remotePath.hasPrefix("~") {
         remotePath = "~/\(remotePath)"
     }
@@ -39,7 +41,6 @@ if isRemoteArg(arg) {
 
     let remote = RemoteFileSource(host: host, remotePath: remotePath)
 
-    // validate connection + file existence before launching UI
     do {
         _ = try remote.fetchContent()
     } catch {
@@ -66,6 +67,6 @@ if isRemoteArg(arg) {
 }
 
 let app = NSApplication.shared
-let delegate = AppDelegate(source: source)
+let delegate = AppDelegate(source: source, progressMode: progressMode)
 app.delegate = delegate
 app.run()
