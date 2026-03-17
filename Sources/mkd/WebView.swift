@@ -55,7 +55,7 @@ class WebViewModel: ObservableObject {
         set { UserDefaults.standard.set(newValue, forKey: "mkd-theme") }
     }
 
-    static let availableThemes = ["github", "dracula", "nord", "gruvbox", "solarized", "rose"]
+    static let availableThemes = ["github", "literary", "brutalist", "typewriter", "nord", "gruvbox", "academic"]
 
     func setTheme(_ name: String) {
         currentTheme = name

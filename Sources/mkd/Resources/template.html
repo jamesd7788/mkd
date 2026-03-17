@@ -46,30 +46,133 @@
 marked.setOptions({ gfm: true, breaks: false });
 
 // --- themes ---
+// each theme: colors (light/dark) + optional style (raw CSS injected into <style id="theme-style">)
 var themes = {
+    // --- clean default, github-flavored ---
     github: {
         light: { fg:'#24292e', bg:'#ffffff', link:'#0366d6', border:'#e1e4e8', codeBg:'#f6f8fa', blockquoteFg:'#6a737d', tableBorder:'#dfe2e5', tableStripe:'#f6f8fa' },
-        dark:  { fg:'#c9d1d9', bg:'#0d1117', link:'#58a6ff', border:'#30363d', codeBg:'#161b22', blockquoteFg:'#8b949e', tableBorder:'#30363d', tableStripe:'#161b22' }
+        dark:  { fg:'#c9d1d9', bg:'#0d1117', link:'#58a6ff', border:'#30363d', codeBg:'#161b22', blockquoteFg:'#8b949e', tableBorder:'#30363d', tableStripe:'#161b22' },
+        style: ''
     },
-    dracula: {
-        light: { fg:'#282a36', bg:'#f8f8f2', link:'#6272a4', border:'#d6d6d6', codeBg:'#e8e8e4', blockquoteFg:'#6272a4', tableBorder:'#d6d6d6', tableStripe:'#ededeb' },
-        dark:  { fg:'#f8f8f2', bg:'#282a36', link:'#8be9fd', border:'#44475a', codeBg:'#44475a', blockquoteFg:'#6272a4', tableBorder:'#44475a', tableStripe:'#343746' }
+
+    // --- literary. serif body, generous spacing, book-like ---
+    literary: {
+        light: { fg:'#2c2c2c', bg:'#faf8f5', link:'#8b4513', border:'#e0d8ce', codeBg:'#f0ebe4', blockquoteFg:'#7a6e5d', tableBorder:'#e0d8ce', tableStripe:'#f5f0e8' },
+        dark:  { fg:'#d4c5b0', bg:'#1a1814', link:'#d4a574', border:'#3a3530', codeBg:'#252119', blockquoteFg:'#8a7e6d', tableBorder:'#3a3530', tableStripe:'#211e18' },
+        style: [
+            'html, body { font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif; line-height: 1.85; letter-spacing: 0.01em; }',
+            ':root { --content-width: 38em; --content-padding: 3em 2em; --heading-weight: 400; --font-heading: "Iowan Old Style", Palatino, Georgia, serif; --radius: 2px; }',
+            'h1 { font-size: 1.8em; font-style: italic; border-bottom: none; padding-bottom: 0; margin-bottom: 0.3em; }',
+            'h2 { font-size: 1.35em; font-variant: small-caps; letter-spacing: 0.05em; border-bottom: none; padding-bottom: 0; }',
+            'h3 { font-size: 1.15em; font-style: italic; }',
+            'blockquote { font-style: italic; border-left-width: 2px; padding: 0.2em 1.5em; }',
+            'hr { border-top: none; text-align: center; margin: 2em 0; }',
+            'hr::after { content: "* * *"; letter-spacing: 0.5em; color: var(--blockquote-fg); font-size: 0.9em; }',
+            'p { text-indent: 0; margin-bottom: 1.2em; }',
+            'a { text-decoration: underline; text-decoration-style: dotted; text-underline-offset: 3px; }',
+            'a:hover { text-decoration-style: solid; }',
+            'pre { border: 1px solid var(--border); border-radius: 2px; }',
+            'code { font-family: "SF Mono", Menlo, monospace; font-size: 0.82em; border-radius: 2px; }',
+        ].join('\n')
     },
+
+    // --- brutalist. monospace everything, harsh, raw, no frills ---
+    brutalist: {
+        light: { fg:'#000000', bg:'#ffffff', link:'#0000ff', border:'#000000', codeBg:'#f0f0f0', blockquoteFg:'#555555', tableBorder:'#000000', tableStripe:'#f5f5f5' },
+        dark:  { fg:'#ffffff', bg:'#000000', link:'#00ff00', border:'#ffffff', codeBg:'#1a1a1a', blockquoteFg:'#aaaaaa', tableBorder:'#ffffff', tableStripe:'#0d0d0d' },
+        style: [
+            'html, body { font-family: "SF Mono", SFMono-Regular, Menlo, "Courier New", monospace; line-height: 1.5; font-size: inherit; }',
+            ':root { --content-width: 72ch; --content-padding: 1.5em 1em; --heading-weight: 700; --radius: 0px; }',
+            'h1, h2, h3, h4, h5, h6 { font-family: "SF Mono", Menlo, monospace; text-transform: uppercase; letter-spacing: 0.08em; }',
+            'h1 { font-size: 1.4em; border-bottom: 3px solid var(--fg); padding-bottom: 0.2em; }',
+            'h2 { font-size: 1.2em; border-bottom: 2px solid var(--fg); padding-bottom: 0.15em; }',
+            'h3 { font-size: 1em; text-decoration: underline; }',
+            'blockquote { border-left: 3px solid var(--fg); font-style: normal; padding: 0 0.8em; }',
+            'a { text-decoration: underline; }',
+            'pre { border: 2px solid var(--border); border-radius: 0; }',
+            'code { border-radius: 0; border: 1px solid var(--border); padding: 0.1em 0.3em; }',
+            'pre code { border: none; }',
+            'table { border: 2px solid var(--border); }',
+            'th, td { border-width: 2px; }',
+            'hr { border-top: 3px solid var(--fg); margin: 2em 0; }',
+            'img { border: 2px solid var(--border); }',
+        ].join('\n')
+    },
+
+    // --- typewriter. evokes a physical page, warm, clacky ---
+    typewriter: {
+        light: { fg:'#333333', bg:'#f9f5ec', link:'#6b4c3b', border:'#d4c9b8', codeBg:'#eee8da', blockquoteFg:'#8a7b6b', tableBorder:'#d4c9b8', tableStripe:'#f3ecdD' },
+        dark:  { fg:'#c8bda8', bg:'#1e1b16', link:'#c8a882', border:'#3d372d', codeBg:'#2a2620', blockquoteFg:'#8a7b6b', tableBorder:'#3d372d', tableStripe:'#252119' },
+        style: [
+            'html, body { font-family: "American Typewriter", "Courier New", Courier, monospace; line-height: 1.75; }',
+            ':root { --content-width: 42em; --content-padding: 3em 2.5em; --heading-weight: 700; --radius: 0px; }',
+            '#content { border-left: 2px solid var(--border); margin-left: 3em; padding-left: 3em; }',
+            'h1 { font-size: 1.6em; border-bottom: none; padding-bottom: 0; text-transform: uppercase; letter-spacing: 0.15em; }',
+            'h2 { font-size: 1.3em; border-bottom: none; padding-bottom: 0; text-decoration: underline; text-underline-offset: 4px; }',
+            'h3 { font-size: 1.1em; }',
+            'blockquote { border-left: none; padding-left: 2em; text-indent: -0.5em; }',
+            'blockquote::before { content: "\\201C"; font-size: 2em; line-height: 0; vertical-align: -0.3em; color: var(--blockquote-fg); margin-right: 0.1em; }',
+            'hr { border-top: none; text-align: center; margin: 2.5em 0; }',
+            'hr::after { content: "- - -"; letter-spacing: 0.3em; color: var(--blockquote-fg); }',
+            'pre { border: 1px dashed var(--border); }',
+            'code { font-family: inherit; }',
+            'a { text-decoration: underline; text-decoration-style: wavy; text-underline-offset: 3px; }',
+        ].join('\n')
+    },
+
+    // --- nord. the classic, clean and muted ---
     nord: {
         light: { fg:'#2e3440', bg:'#eceff4', link:'#5e81ac', border:'#d8dee9', codeBg:'#e5e9f0', blockquoteFg:'#4c566a', tableBorder:'#d8dee9', tableStripe:'#e5e9f0' },
-        dark:  { fg:'#d8dee9', bg:'#2e3440', link:'#88c0d0', border:'#3b4252', codeBg:'#3b4252', blockquoteFg:'#616e88', tableBorder:'#3b4252', tableStripe:'#353c4a' }
+        dark:  { fg:'#d8dee9', bg:'#2e3440', link:'#88c0d0', border:'#3b4252', codeBg:'#3b4252', blockquoteFg:'#616e88', tableBorder:'#3b4252', tableStripe:'#353c4a' },
+        style: [
+            'html, body { font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif; line-height: 1.65; }',
+            ':root { --content-width: 46em; --heading-weight: 700; --radius: 8px; }',
+            'h1 { border-bottom-color: var(--link); border-bottom-width: 2px; }',
+            'h2 { border-bottom-style: dashed; }',
+            'pre { border-radius: 8px; }',
+            'code { border-radius: 4px; }',
+            'blockquote { border-left-color: var(--link); border-left-width: 3px; }',
+        ].join('\n')
     },
+
+    // --- gruvbox. warm retro, earthy ---
     gruvbox: {
         light: { fg:'#3c3836', bg:'#fbf1c7', link:'#076678', border:'#d5c4a1', codeBg:'#ebdbb2', blockquoteFg:'#665c54', tableBorder:'#d5c4a1', tableStripe:'#f2e5bc' },
-        dark:  { fg:'#ebdbb2', bg:'#282828', link:'#83a598', border:'#504945', codeBg:'#3c3836', blockquoteFg:'#a89984', tableBorder:'#504945', tableStripe:'#32302f' }
+        dark:  { fg:'#ebdbb2', bg:'#282828', link:'#83a598', border:'#504945', codeBg:'#3c3836', blockquoteFg:'#a89984', tableBorder:'#504945', tableStripe:'#32302f' },
+        style: [
+            'html, body { font-family: "Charter", "Bitstream Charter", Georgia, serif; line-height: 1.7; }',
+            ':root { --content-width: 44em; --content-padding: 2.5em 2em; --heading-weight: 700; --radius: 4px; }',
+            'h1, h2, h3 { font-family: -apple-system, BlinkMacSystemFont, sans-serif; }',
+            'h1 { border-bottom: 2px solid var(--link); }',
+            'h2 { border-bottom: 1px dashed var(--border); }',
+            'blockquote { background: var(--code-bg); border-radius: 4px; padding: 0.8em 1.2em; border-left: 4px solid var(--link); }',
+            'pre { border: 1px solid var(--border); }',
+        ].join('\n')
     },
-    solarized: {
-        light: { fg:'#657b83', bg:'#fdf6e3', link:'#268bd2', border:'#eee8d5', codeBg:'#eee8d5', blockquoteFg:'#93a1a1', tableBorder:'#eee8d5', tableStripe:'#f5efdc' },
-        dark:  { fg:'#839496', bg:'#002b36', link:'#268bd2', border:'#073642', codeBg:'#073642', blockquoteFg:'#586e75', tableBorder:'#073642', tableStripe:'#06313c' }
-    },
-    rose: {
-        light: { fg:'#403b3b', bg:'#fff5f5', link:'#be185d', border:'#e8d5d5', codeBg:'#f5e6e6', blockquoteFg:'#8c7575', tableBorder:'#e8d5d5', tableStripe:'#faf0f0' },
-        dark:  { fg:'#e8d5d5', bg:'#1c1517', link:'#f472b6', border:'#3d2832', codeBg:'#2a1c22', blockquoteFg:'#8c7575', tableBorder:'#3d2832', tableStripe:'#231a1e' }
+
+    // --- academic. tight, information-dense, paper-like ---
+    academic: {
+        light: { fg:'#1a1a1a', bg:'#ffffff', link:'#1a5276', border:'#cccccc', codeBg:'#f5f5f5', blockquoteFg:'#555555', tableBorder:'#cccccc', tableStripe:'#f9f9f9' },
+        dark:  { fg:'#d0d0d0', bg:'#181818', link:'#6daedb', border:'#333333', codeBg:'#222222', blockquoteFg:'#888888', tableBorder:'#333333', tableStripe:'#1e1e1e' },
+        style: [
+            'html, body { font-family: "Times New Roman", "Noto Serif", Times, serif; line-height: 1.5; font-size: inherit; }',
+            ':root { --content-width: 40em; --content-padding: 2em 2em; --heading-weight: 700; --radius: 0px; --font-mono: "SF Mono", Menlo, monospace; }',
+            'h1 { font-size: 1.5em; text-align: center; border-bottom: none; padding-bottom: 0; margin-bottom: 0.2em; }',
+            'h1 + p, h1 + h2 { text-align: center; }',
+            'h2 { font-size: 1.2em; border-bottom: none; padding-bottom: 0; margin-top: 2em; }',
+            'h3 { font-size: 1em; font-style: italic; font-weight: 400; }',
+            'p { text-align: justify; hyphens: auto; -webkit-hyphens: auto; margin-bottom: 0.8em; }',
+            'blockquote { font-size: 0.92em; margin: 1em 2em; padding: 0; border-left: none; }',
+            'blockquote p { text-indent: 0; }',
+            'a { color: var(--link); text-decoration: none; }',
+            'a:hover { text-decoration: underline; }',
+            'pre { font-size: 0.85em; border: 1px solid var(--border); border-radius: 0; }',
+            'code { border-radius: 0; font-size: 0.85em; }',
+            'table { font-size: 0.92em; }',
+            'hr { margin: 2em auto; width: 30%; border-top: 1px solid var(--border); }',
+            'img { display: block; margin: 1.5em auto; }',
+            'ul, ol { padding-left: 1.5em; }',
+        ].join('\n')
     }
 };
 
@@ -88,6 +191,22 @@ function setTheme(name) {
     root.style.setProperty('--blockquote-fg', vars.blockquoteFg);
     root.style.setProperty('--table-border', vars.tableBorder);
     root.style.setProperty('--table-stripe', vars.tableStripe);
+
+    // inject theme style overrides
+    var existing = document.getElementById('theme-style');
+    if (existing) existing.remove();
+    if (theme.style) {
+        var styleEl = document.createElement('style');
+        styleEl.id = 'theme-style';
+        styleEl.textContent = theme.style;
+        document.head.appendChild(styleEl);
+    }
+
+    // reset custom props that previous themes may have set
+    var resetProps = ['--content-width','--content-padding','--heading-weight','--font-heading','--font-body','--font-mono','--line-height','--letter-spacing','--radius','--heading-border'];
+    resetProps.forEach(function(p) { root.style.removeProperty(p); });
+
+    document.body.className = 'theme-' + name;
 }
 
 // respond to system dark/light changes
