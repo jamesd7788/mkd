@@ -48,10 +48,10 @@ marked.setOptions({ gfm: true, breaks: false });
 // --- themes ---
 // each theme: colors (light/dark) + optional style (raw CSS injected into <style id="theme-style">)
 var themes = {
-    // --- clean default, github-flavored ---
+    // --- 1:1 github markdown ---
     github: {
-        light: { fg:'#24292e', bg:'#ffffff', link:'#0366d6', border:'#e1e4e8', codeBg:'#f6f8fa', blockquoteFg:'#6a737d', tableBorder:'#dfe2e5', tableStripe:'#f6f8fa' },
-        dark:  { fg:'#c9d1d9', bg:'#0d1117', link:'#58a6ff', border:'#30363d', codeBg:'#161b22', blockquoteFg:'#8b949e', tableBorder:'#30363d', tableStripe:'#161b22' },
+        light: { fg:'#1f2328', bg:'#ffffff', link:'#0969da', border:'#d1d9e0', codeBg:'#f6f8fa', blockquoteFg:'#59636e', tableBorder:'#d1d9e0', tableStripe:'#f6f8fa', inlineCodeBg:'rgba(129,139,152,0.12)' },
+        dark:  { fg:'#f0f6fc', bg:'#0d1117', link:'#4493f8', border:'#3d444d', codeBg:'#151b23', blockquoteFg:'#9198a1', tableBorder:'#3d444d', tableStripe:'#151b23', inlineCodeBg:'rgba(101,108,118,0.2)' },
         style: ''
     },
 
@@ -191,8 +191,13 @@ function setTheme(name) {
     root.style.setProperty('--blockquote-fg', vars.blockquoteFg);
     root.style.setProperty('--table-border', vars.tableBorder);
     root.style.setProperty('--table-stripe', vars.tableStripe);
+    if (vars.inlineCodeBg) {
+        root.style.setProperty('--inline-code-bg', vars.inlineCodeBg);
+    } else {
+        root.style.removeProperty('--inline-code-bg');
+    }
 
-    // inject theme style overrides
+    // remove previous theme style, inject new one
     var existing = document.getElementById('theme-style');
     if (existing) existing.remove();
     if (theme.style) {
@@ -201,10 +206,6 @@ function setTheme(name) {
         styleEl.textContent = theme.style;
         document.head.appendChild(styleEl);
     }
-
-    // reset custom props that previous themes may have set
-    var resetProps = ['--content-width','--content-padding','--heading-weight','--font-heading','--font-body','--font-mono','--line-height','--letter-spacing','--radius','--heading-border'];
-    resetProps.forEach(function(p) { root.style.removeProperty(p); });
 
     document.body.className = 'theme-' + name;
 }

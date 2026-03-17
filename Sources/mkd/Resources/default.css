@@ -1,4 +1,4 @@
-/* theme vars + style overrides injected via JS setTheme() */
+/* base styles — github markdown spec, overridden per-theme via <style id="theme-style"> */
 
 * {
     box-sizing: border-box;
@@ -9,63 +9,70 @@ html, body {
     padding: 0;
     background: var(--bg);
     color: var(--fg);
-    font-family: var(--font-body, (-apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif));
-    line-height: var(--line-height, 1.6);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+    font-size: 16px;
+    line-height: 1.5;
+    word-wrap: break-word;
     -webkit-font-smoothing: antialiased;
-    letter-spacing: var(--letter-spacing, normal);
 }
 
 #content {
-    max-width: var(--content-width, 48em);
+    max-width: 980px;
     margin: 0 auto;
-    padding: var(--content-padding, 2em 1.5em);
+    padding: 45px 45px;
 }
 
 h1, h2, h3, h4, h5, h6 {
-    margin-top: 1.5em;
-    margin-bottom: 0.5em;
-    font-weight: var(--heading-weight, 600);
+    margin-top: 1.5rem;
+    margin-bottom: 1rem;
+    font-weight: 600;
     line-height: 1.25;
-    font-family: var(--font-heading, inherit);
 }
 
-h1 { font-size: 2em; padding-bottom: 0.3em; border-bottom: var(--heading-border, 1px solid var(--border)); }
-h2 { font-size: 1.5em; padding-bottom: 0.3em; border-bottom: var(--heading-border, 1px solid var(--border)); }
+h1 { font-size: 2em; padding-bottom: 0.3em; border-bottom: 1px solid var(--border); }
+h2 { font-size: 1.5em; padding-bottom: 0.3em; border-bottom: 1px solid var(--border); }
 h3 { font-size: 1.25em; }
+h4 { font-size: 1em; }
+h5 { font-size: 0.875em; }
+h6 { font-size: 0.85em; color: var(--blockquote-fg); }
 
-a { color: var(--link); text-decoration: none; }
+a { color: var(--link); text-decoration: underline; }
 a:hover { text-decoration: underline; }
 
-p { margin: 0 0 1em; }
+p { margin-top: 0; margin-bottom: 10px; }
 
 blockquote {
-    margin: 0 0 1em;
+    margin: 0 0 1rem;
     padding: 0 1em;
     color: var(--blockquote-fg);
     border-left: 0.25em solid var(--border);
 }
 
 code {
-    font-family: var(--font-mono, ("SF Mono", SFMono-Regular, Menlo, Consolas, monospace));
-    font-size: 0.875em;
-    background: var(--code-bg);
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+    font-size: 12px;
+    background: var(--inline-code-bg, var(--code-bg));
     padding: 0.2em 0.4em;
-    border-radius: var(--radius, 3px);
+    border-radius: 6px;
 }
 
 pre {
     background: var(--code-bg);
-    padding: 1em;
-    border-radius: var(--radius, 6px);
+    padding: 1rem;
+    border-radius: 6px;
     overflow-x: auto;
-    margin: 0 0 1em;
+    margin-top: 0;
+    margin-bottom: 1rem;
+    font-size: 85%;
+    line-height: 1.45;
 }
 
 pre code {
     background: none;
     padding: 0;
-    font-size: 0.85em;
+    font-size: 100%;
     line-height: 1.45;
+    border-radius: 0;
 }
 
 img {
@@ -76,18 +83,20 @@ img {
 table {
     border-collapse: collapse;
     width: 100%;
-    margin: 0 0 1em;
+    margin-top: 0;
+    margin-bottom: 1rem;
+    display: block;
+    overflow: auto;
 }
 
 th, td {
-    padding: 0.5em 1em;
+    padding: 6px 13px;
     border: 1px solid var(--table-border);
     text-align: left;
 }
 
 th {
     font-weight: 600;
-    background: var(--table-stripe);
 }
 
 tr:nth-child(even) {
@@ -95,14 +104,18 @@ tr:nth-child(even) {
 }
 
 hr {
-    border: none;
-    border-top: 1px solid var(--border);
-    margin: 1.5em 0;
+    height: 0.25em;
+    padding: 0;
+    margin: 1.5rem 0;
+    background: transparent;
+    border: 0;
+    border-bottom: 1px solid var(--border);
 }
 
 ul, ol {
     padding-left: 2em;
-    margin: 0 0 1em;
+    margin-top: 0;
+    margin-bottom: 1rem;
 }
 
 li + li {
